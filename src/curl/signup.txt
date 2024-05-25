@@ -1,0 +1,4 @@
+-X POST
+-H "Content-Type: application/json"
+-d '{"email":"test@test.com","password":"password","name":"Test"}'
+http://localhost:8000/api/auth/signup
