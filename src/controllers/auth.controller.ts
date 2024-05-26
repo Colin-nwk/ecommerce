@@ -7,7 +7,7 @@ import { BADRequestException } from "../exceptions/bad-requests";
 import { ErrorCodes } from "../exceptions/root";
 import { UnprocessableEntity } from "../exceptions/validation";
 import { SignUpSchema } from "../schema/users";
-import { ZodIssue } from "zod";
+// import { ZodIssue } from "zod";
 import { NotFoundException } from "../exceptions/not-found";
 export const signup = async (
   req: Request,
