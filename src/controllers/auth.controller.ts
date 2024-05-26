@@ -7,50 +7,29 @@ import { BADRequestException } from "../exceptions/bad-requests";
 import { ErrorCodes } from "../exceptions/root";
 import { UnprocessableEntity } from "../exceptions/validation";
 import { SignUpSchema } from "../schema/users";
+import { ZodIssue } from "zod";
+import { NotFoundException } from "../exceptions/not-found";
 export const signup = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
-  // try {
-  //   SignUpSchema.parse(req.body);
-  //   const { email, password, name } = req.body;
+  const parseResult = SignUpSchema.safeParse(req.body);
 
-  //   if (!password || typeof password !== "string") {
-  //     return res.status(400).json({ error: "Password is required" });
-  //   }
-  //   const salt = bcrypt.genSaltSync(10);
-  //   const hash = bcrypt.hashSync(password, salt);
-  //   let user = await prismaClient.user.findFirst({ where: { email } });
+  if (!parseResult.success) {
+    next(
+      new UnprocessableEntity(
+        "unprocessable entity",
+        ErrorCodes.UNPROCESSABLE_ENTITY,
+        // parseResult.error.format()
+        parseResult.error.flatten()
+        // parseResult.error.flatten((issue: ZodIssue) => ({
+        //   message: issue.message,
+        // }))
+      )
+    );
+  }
 
-  //   if (user) {
-  //     next(
-  //       new BADRequestException(
-  //         "User already exists",
-  //         ErrorCodes.USER_ALREADY_EXIST
-  //       )
-  //     );
-  //   }
-
-  //   user = await prismaClient.user.create({
-  //     data: { email, name, password: hash },
-  //   });
-  //   res.json(user);
-  // } catch (error: any) {
-  //   if (error instanceof BADRequestException) {
-  //     next(error);
-  //   } else {
-  //     next(
-  //       new UnprocessableEntity(
-  //         "Unprocessable Entity",
-  //         ErrorCodes.UNPROCESSABLE_ENTITY,
-  //         error?.issues
-  //       )
-  //     );
-  //   }
-  // }
-
-  SignUpSchema.parse(req.body);
   const { email, password, name } = req.body;
   const salt = bcrypt.genSaltSync(10);
   const hash = bcrypt.hashSync(password, salt);
@@ -63,6 +42,7 @@ export const signup = async (
         ErrorCodes.USER_ALREADY_EXIST
       )
     );
+    return;
   }
 
   user = await prismaClient.user.create({
@@ -81,14 +61,23 @@ export const login = async (
 
   if (!user) {
     next(
-      new BADRequestException("User does not exist", ErrorCodes.USER_NOT_FOUND)
+      new NotFoundException("User does not exist", ErrorCodes.USER_NOT_FOUND)
     );
     return;
   }
 
   if (!bcrypt.compareSync(password, user.password)) {
-    throw Error("invalid credentials");
+    next(
+      new BADRequestException(
+        "Invalid credentials",
+        ErrorCodes.INCORRECT_PASSWORD
+      )
+    );
+    return;
   }
   const token = jwt.sign({ userId: user.id }, JWT_SECRET) as string;
   res.json({ user, token });
+};
+export const me = async (req: Request, res: Response) => {
+  res.json(req.user);
 };
