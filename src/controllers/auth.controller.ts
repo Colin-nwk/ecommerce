@@ -45,10 +45,11 @@ export const signup = async (
     return;
   }
 
-  user = await prismaClient.user.create({
+  const created_user = await prismaClient.user.create({
     data: { email, name, password: hash },
+    select: { id: true, email: true, name: true, role: true },
   });
-  res.json(user);
+  res.json(created_user);
 };
 export const login = async (
   req: Request,
@@ -76,8 +77,18 @@ export const login = async (
     return;
   }
   const token = jwt.sign({ userId: user.id }, JWT_SECRET) as string;
-  res.json({ user, token });
+  const current_user = findUserByEmail(user.email);
+  res.json({ current_user, token });
 };
 export const me = async (req: Request, res: Response) => {
-  res.json(req.user);
+  const current_user = findUserByEmail(req.user.email);
+  res.json(current_user);
+};
+
+const findUserByEmail = async (email: string) => {
+  const user = await prismaClient.user.findFirst({
+    where: { email },
+    select: { id: true, email: true, name: true, role: true },
+  });
+  return user;
 };
