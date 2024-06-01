@@ -6,7 +6,7 @@ import { JWT_SECRET } from "../secrets";
 import { BADRequestException } from "../exceptions/bad-requests";
 import { ErrorCodes } from "../exceptions/root";
 import { UnprocessableEntity } from "../exceptions/validation";
-import { SignUpSchema } from "../schema/users";
+import { LoginSchema, SignUpSchema } from "../schema/users";
 // import { ZodIssue } from "zod";
 import { NotFoundException } from "../exceptions/not-found";
 export const signup = async (
@@ -56,6 +56,8 @@ export const login = async (
   res: Response,
   next: NextFunction
 ) => {
+  LoginSchema.parse(req.body);
+
   const { email, password } = req.body;
 
   const user = await prismaClient.user.findFirst({ where: { email } });
@@ -77,12 +79,13 @@ export const login = async (
     return;
   }
   const token = jwt.sign({ userId: user.id }, JWT_SECRET) as string;
-  const current_user = findUserByEmail(user.email);
-  res.json({ current_user, token });
+  const account = await findUserByEmail(user.email);
+  res.json({ account, token });
 };
 export const me = async (req: Request, res: Response) => {
-  const current_user = findUserByEmail(req.user.email);
-  res.json(current_user);
+  const account = await findUserByEmail(req.user.email);
+  console.log(req.user.email);
+  res.json(account);
 };
 
 const findUserByEmail = async (email: string) => {
